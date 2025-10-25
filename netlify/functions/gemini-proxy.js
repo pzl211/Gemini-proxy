@@ -45,13 +45,17 @@ exports.handler = async (event, context) => {
       body: JSON.stringify(data),
     };
   } catch (error) {
-    return {
-      statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ error: 'Internal Server Error' }),
-    };
-  }
-};
+  console.error('Proxy Error Details:', error.message); //在Netlify日志中记录详细错误
+  return {
+    statusCode: 500,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ 
+      error: 'Proxy Function Error',
+      details: error.message,        // 将具体的错误信息返回给客户端
+      url: url                        // 返回当时请求的URL，有助于诊断
+    }), // <-- 注意，这个右括号后面现在有一个逗号了！
+  }; // <-- 这是return语句的结束
+} // <-- 这是catch块的结束
