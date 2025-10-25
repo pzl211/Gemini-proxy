@@ -1,0 +1,8 @@
+# 在项目根目录下创建netlify.toml文件，并添加以下内容
+[build]
+ publish = "dist" # 替换为你的构建输出目录
+ functions = "functions" # 如果有Netlify Functions，指定目录
+[[redirects]]
+ from = "/*"
+ to = "/index.html"
+ status = 200
