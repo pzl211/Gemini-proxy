@@ -18,7 +18,10 @@ exports.handler = async (event, context) => {
   if (!GEMINI_API_KEY) {
     return {
       statusCode: 500,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+      headers: { 
+        'Access-Control-Allow-Origin': '*', 
+        'Content-Type': 'application/json' 
+      },
       body: JSON.stringify({ error: 'GEMINI_API_KEY is not set.' })
     };
   }
@@ -28,36 +31,52 @@ exports.handler = async (event, context) => {
   const queryString = event.rawQuery ? `?${event.rawQuery}` : '';
   const url = `https://generativelanguage.googleapis.com${path}${queryString}&key=${GEMINI_API_KEY}`;
 
-  console.log('Proxying request to:', url); // 帮助调试的日志
+  console.log('Proxying request to:', url);
 
   try {
-    const response = await fetch(url, {
+    // 准备 fetch 选项
+    const fetchOptions = {
       method: event.httpMethod,
-      headers: { 'Content-Type': 'application/json' },
-      body: event.body
-    });
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+
+    // 只有非 GET/HEAD 请求且有 body 时才添加 body
+    if (event.httpMethod !== 'GET' && event.httpMethod !== 'HEAD' && event.body) {
+      fetchOptions.body = event.body;
+    }
+
+    const response = await fetch(url, fetchOptions);
 
     if (!response.ok) {
-      // 如果 Gemini API 返回错误，直接返回错误状态和消息
-      return {
-        statusCode: response.status,
-        body: JSON.stringify({ error: `Gemini API error: ${response.status}` })
-      };
+      const errorText = await response.text();
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    
     return {
       statusCode: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+      headers: { 
+        'Access-Control-Allow-Origin': '*', 
+        'Content-Type': 'application/json' 
+      },
       body: JSON.stringify(data)
     };
   } catch (error) {
-    // 简单的错误处理，避免复杂结构导致语法错误
-    console.error('Error:', error);
+    console.error('Proxy error:', error);
+    
     return {
       statusCode: 500,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: error.message })
+      headers: { 
+        'Access-Control-Allow-Origin': '*', 
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify({ 
+        error: 'Proxy Function Error',
+        details: error.message
+      })
     };
   }
 };
