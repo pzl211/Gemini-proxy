@@ -1,8 +1,17 @@
-# 在项目根目录下创建netlify.toml文件，并添加以下内容
+# netlify.toml
 [build]
- publish = "dist" # 替换为你的构建输出目录
- functions = "functions" # 如果有Netlify Functions，指定目录
+  # 明确告诉Netlify没有构建步骤
+  command = "echo 'No build step for API proxy'"
+  # 关键！ 发布目录设置为一个不存在的目录或根目录，因为我们没有静态文件
+  publish = "."
+
+# 关键！ 明确指定我们的函数目录位置
+[functions]
+  directory = "netlify/functions"
+
+# 设置重定向，防止SPA路由404（可选，但建议加上）
 [[redirects]]
- from = "/*"
- to = "/index.html"
- status = 200
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  conditions = {Language = [], Country = [], Role = []}
