@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini 用户验证系统</title>
+    <title>Gemini API 代理测试界面</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
         }
         
         body {
-            background-color: #f5f5f5;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -22,189 +22,270 @@
         }
         
         .container {
-            background-color: white;
+            background: white;
             border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 380px;
+            max-width: 900px;
             overflow: hidden;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        
-        .container:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
         }
         
         .header {
             background: linear-gradient(90deg, #4285f4, #34a853, #fbbc05, #ea4335);
-            padding: 28px 24px;
+            padding: 30px;
             text-align: center;
             color: white;
+            position: relative;
         }
         
         .header h1 {
-            font-size: 24px;
-            margin-bottom: 8px;
+            font-size: 28px;
+            margin-bottom: 10px;
             font-weight: 600;
-            letter-spacing: 0.5px;
         }
         
         .header p {
-            opacity: 0.95;
-            font-size: 15px;
-            font-weight: 400;
+            opacity: 0.9;
+            font-size: 16px;
         }
         
         .content {
-            padding: 32px 24px 24px;
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
         }
         
-        .logo-container {
-            text-align: center;
-            margin-bottom: 28px;
-        }
-        
-        .logo {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #4285f4, #34a853, #fbbc05, #ea4335);
+        .input-section, .output-section {
             display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 0 auto 16px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            flex-direction: column;
         }
         
-        .logo-inner {
-            width: 68px;
-            height: 68px;
-            background-color: white;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 36px;
-            font-weight: 700;
-            color: #4285f4;
-        }
-        
-        .logo-text {
-            font-size: 22px;
+        .section-title {
+            font-size: 18px;
             font-weight: 600;
             color: #333;
-            letter-spacing: 0.5px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
-        .input-group {
-            margin-bottom: 24px;
+        .section-actions {
+            display: flex;
+            gap: 10px;
         }
         
-        .input-group label {
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-small:hover {
+            background: #f5f5f5;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
             display: block;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             font-weight: 500;
             color: #555;
-            font-size: 15px;
+            font-size: 14px;
         }
         
-        .input-group input {
+        .form-group input, .form-group textarea, .form-group select {
             width: 100%;
-            padding: 14px 16px;
+            padding: 12px 15px;
             border: 2px solid #e8eaed;
-            border-radius: 10px;
-            font-size: 16px;
+            border-radius: 8px;
+            font-size: 14px;
             transition: all 0.3s;
             background-color: #f8f9fa;
         }
         
-        .input-group input:focus {
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
             border-color: #4285f4;
-            box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2);
+            box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
             outline: none;
             background-color: white;
         }
         
-        .input-group input::placeholder {
-            color: #9aa0a6;
+        .form-group textarea {
+            height: 120px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
         }
         
         .btn {
             background: linear-gradient(90deg, #4285f4, #34a853);
             color: white;
             border: none;
-            padding: 15px 20px;
+            padding: 14px 20px;
             font-size: 16px;
             font-weight: 600;
-            border-radius: 10px;
+            border-radius: 8px;
             cursor: pointer;
             width: 100%;
             transition: all 0.3s;
-            box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
-            letter-spacing: 0.5px;
+            margin-top: 10px;
+            position: relative;
+            overflow: hidden;
         }
         
-        .btn:hover {
+        .btn:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
         
-        .btn:active {
-            transform: translateY(1px);
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-left: -10px;
+            margin-top: -10px;
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .response-container {
+            background: #f8f9fa;
+            border: 1px solid #e8eaed;
+            border-radius: 8px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+        
+        .status-indicator {
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-ready {
+            background: #e6f4ea;
+            color: #137333;
+            border-left: 4px solid #34a853;
+        }
+        
+        .status-loading {
+            background: #fef7e0;
+            color: #ea8600;
+            border-left: 4px solid #fbbc05;
+        }
+        
+        .status-error {
+            background: #fce8e6;
+            color: #c5221f;
+            border-left: 4px solid #ea4335;
+        }
+        
+        .status-success {
+            background: #e6f4ea;
+            color: #137333;
+            border-left: 4px solid #34a853;
+        }
+        
+        .request-info {
+            background: #f0f7ff;
+            border: 1px solid #d0e2ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        
+        .request-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        
+        .request-info-label {
+            font-weight: 600;
+            color: #555;
         }
         
         .footer {
             text-align: center;
-            margin-top: 20px;
-            color: #777;
-            font-size: 13px;
-            line-height: 1.5;
-            padding: 0 10px;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #666;
+            font-size: 14px;
+            border-top: 1px solid #e8eaed;
         }
         
-        .success-message {
-            display: none;
-            background-color: #e6f4ea;
-            color: #137333;
-            padding: 14px 16px;
-            border-radius: 10px;
-            margin-top: 20px;
-            text-align: center;
-            font-weight: 500;
-            font-size: 15px;
+        .endpoint-presets {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
         }
         
-        @media (max-width: 480px) {
-            .container {
-                max-width: 100%;
-            }
-            
+        .endpoint-btn {
+            padding: 6px 12px;
+            background: #f1f3f4;
+            border: 1px solid #dadce0;
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .endpoint-btn:hover {
+            background: #e8f0fe;
+            border-color: #4285f4;
+        }
+        
+        @media (max-width: 768px) {
             .content {
-                padding: 28px 20px 20px;
+                grid-template-columns: 1fr;
+                gap: 20px;
             }
             
-            .header h1 {
-                font-size: 22px;
+            .container {
+                margin: 10px;
             }
             
-            .header p {
-                font-size: 14px;
-            }
-            
-            .logo {
-                width: 90px;
-                height: 90px;
-            }
-            
-            .logo-inner {
-                width: 60px;
-                height: 60px;
-                font-size: 32px;
-            }
-            
-            .logo-text {
-                font-size: 20px;
+            .section-actions {
+                flex-direction: column;
             }
         }
     </style>
@@ -212,77 +293,256 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>用户验证系统</h1>
-            <p>请输入您的用户名进行验证</p>
+            <h1>Gemini API 代理测试界面</h1>
+            <p>通过Netlify Function安全访问Gemini API</p>
         </div>
         
         <div class="content">
-            <div class="logo-container">
-                <div class="logo">
-                    <div class="logo-inner">G</div>
+            <div class="input-section">
+                <div class="section-title">
+                    <span>请求配置</span>
+                    <div class="section-actions">
+                        <button class="btn-small" id="clearAll">清空</button>
+                        <button class="btn-small" id="loadExample">加载示例</button>
+                    </div>
                 </div>
-                <div class="logo-text">Gemini</div>
+                
+                <div class="form-group">
+                    <label for="apiEndpoint">API端点</label>
+                    <input type="text" id="apiEndpoint" value="/models/gemini-pro:generateContent" placeholder="例如: /models 或 /models/gemini-pro:generateContent">
+                    <div class="endpoint-presets">
+                        <div class="endpoint-btn" data-endpoint="/models">模型列表</div>
+                        <div class="endpoint-btn" data-endpoint="/models/gemini-pro">Gemini Pro</div>
+                        <div class="endpoint-btn" data-endpoint="/models/gemini-pro:generateContent">生成内容</div>
+                        <div class="endpoint-btn" data-endpoint="/models/gemini-pro-vision:generateContent">视觉模型</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="requestBody">请求体 (JSON格式)</label>
+                    <textarea id="requestBody" placeholder='{"contents": [{"parts": [{"text": "你好"}]}]}'>{
+  "contents": [{
+    "parts": [{
+      "text": "请用中文简单介绍一下Google Gemini AI，包括它的主要特点和能力。"
+    }]
+  }],
+  "generationConfig": {
+    "temperature": 0.7,
+    "maxOutputTokens": 500
+  }
+}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="httpMethod">HTTP方法</label>
+                    <select id="httpMethod">
+                        <option value="GET">GET</option>
+                        <option value="POST" selected>POST</option>
+                    </select>
+                </div>
+                
+                <button class="btn" id="sendRequest">
+                    <span class="btn-text">发送请求到代理API</span>
+                </button>
             </div>
             
-            <div class="input-group">
-                <label for="username">用户名</label>
-                <input type="text" id="username" placeholder="请输入">
-            </div>
-            
-            <button class="btn" id="verifyBtn">验证码身份</button>
-            
-            <div class="success-message" id="successMessage">
-                验证成功！欢迎访问系统。
+            <div class="output-section">
+                <div class="section-title">
+                    <span>响应结果</span>
+                    <div class="section-actions">
+                        <button class="btn-small" id="copyResponse">复制</button>
+                        <button class="btn-small" id="clearResponse">清空</button>
+                    </div>
+                </div>
+                
+                <div class="status-indicator status-ready" id="statusIndicator">
+                    <span>就绪: 等待请求...</span>
+                    <span id="responseTime"></span>
+                </div>
+                
+                <div class="request-info" id="requestInfo" style="display: none;">
+                    <div class="request-info-item">
+                        <span class="request-info-label">请求ID:</span>
+                        <span id="requestId">-</span>
+                    </div>
+                    <div class="request-info-item">
+                        <span class="request-info-label">状态码:</span>
+                        <span id="statusCode">-</span>
+                    </div>
+                    <div class="request-info-item">
+                        <span class="request-info-label">响应时间:</span>
+                        <span id="responseTimeDetail">-</span>
+                    </div>
+                </div>
+                
+                <div class="response-container" id="responseOutput">
+// 响应将显示在这里
+                </div>
             </div>
         </div>
         
         <div class="footer">
-            <p>© 2025 Gemini 验证系统 | 仅供授权用户使用</p>
+            <p>© 2025 Gemini API 代理服务 | 基于Netlify Functions构建 | 安全代理访问</p>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const usernameInput = document.getElementById('username');
-            const verifyBtn = document.getElementById('verifyBtn');
-            const successMessage = document.getElementById('successMessage');
-            
-            // 预设的正确用户名
-            const correctUsername = "梁展鹏";
-            
-            // 验证按钮点击事件
-            verifyBtn.addEventListener('click', function() {
-                const enteredUsername = usernameInput.value.trim();
+            const sendBtn = document.getElementById('sendRequest');
+            const btnText = sendBtn.querySelector('.btn-text');
+            const statusIndicator = document.getElementById('statusIndicator');
+            const responseOutput = document.getElementById('responseOutput');
+            const apiEndpoint = document.getElementById('apiEndpoint');
+            const requestBody = document.getElementById('requestBody');
+            const httpMethod = document.getElementById('httpMethod');
+            const responseTime = document.getElementById('responseTime');
+            const requestInfo = document.getElementById('requestInfo');
+            const requestId = document.getElementById('requestId');
+            const statusCode = document.getElementById('statusCode');
+            const responseTimeDetail = document.getElementById('responseTimeDetail');
+
+            // 端点预设
+            document.querySelectorAll('.endpoint-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    apiEndpoint.value = this.getAttribute('data-endpoint');
+                });
+            });
+
+            // 清空所有
+            document.getElementById('clearAll').addEventListener('click', function() {
+                apiEndpoint.value = '';
+                requestBody.value = '';
+                responseOutput.textContent = '// 响应将显示在这里';
+                updateStatus('ready', '就绪: 等待请求...');
+                requestInfo.style.display = 'none';
+            });
+
+            // 加载示例
+            document.getElementById('loadExample').addEventListener('click', function() {
+                apiEndpoint.value = '/models/gemini-pro:generateContent';
+                requestBody.value = `{
+  "contents": [{
+    "parts": [{
+      "text": "请用中文简单介绍一下Google Gemini AI，包括它的主要特点和能力。"
+    }]
+  }],
+  "generationConfig": {
+    "temperature": 0.7,
+    "maxOutputTokens": 500
+  }
+}`;
+            });
+
+            // 复制响应
+            document.getElementById('copyResponse').addEventListener('click', function() {
+                navigator.clipboard.writeText(responseOutput.textContent).then(() => {
+                    const originalText = this.textContent;
+                    this.textContent = '已复制!';
+                    setTimeout(() => {
+                        this.textContent = originalText;
+                    }, 2000);
+                });
+            });
+
+            // 清空响应
+            document.getElementById('clearResponse').addEventListener('click', function() {
+                responseOutput.textContent = '// 响应将显示在这里';
+                requestInfo.style.display = 'none';
+            });
+
+            // 发送请求到代理函数
+            sendBtn.addEventListener('click', async function() {
+                const endpoint = apiEndpoint.value.trim() || '/models';
+                const method = httpMethod.value;
+                let bodyContent = null;
                 
-                if (enteredUsername === "") {
-                    alert("请输入用户名！");
+                try {
+                    if (method !== 'GET' && requestBody.value.trim()) {
+                        bodyContent = JSON.parse(requestBody.value.trim());
+                    }
+                } catch (e) {
+                    updateStatus('error', 'JSON格式错误: ' + e.message);
                     return;
                 }
                 
-                if (enteredUsername === correctUsername) {
-                    // 验证成功
-                    successMessage.style.display = 'block';
-                    successMessage.textContent = `验证成功！欢迎 ${enteredUsername} 访问系统。`;
+                // 更新状态
+                updateStatus('loading', '请求发送中...');
+                setLoading(true);
+                
+                const startTime = Date.now();
+                
+                try {
+                    const requestOptions = {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    };
                     
-                    // 清空输入框
-                    usernameInput.value = "";
+                    if (bodyContent) {
+                        requestOptions.body = JSON.stringify(bodyContent);
+                    }
                     
-                    // 3秒后隐藏成功消息
-                    setTimeout(() => {
-                        successMessage.style.display = 'none';
-                    }, 3000);
-                } else {
-                    // 验证失败
-                    alert("用户名错误！请检查后重试。");
-                    usernameInput.focus();
+                    const response = await fetch(`/.netlify/functions/gemini-proxy${endpoint}`, requestOptions);
+                    const endTime = Date.now();
+                    const duration = endTime - startTime;
+                    
+                    const responseData = await response.json();
+                    
+                    // 显示请求信息
+                    requestInfo.style.display = 'block';
+                    requestId.textContent = response.headers.get('X-Request-ID') || '-';
+                    statusCode.textContent = response.status;
+                    responseTimeDetail.textContent = `${duration}ms`;
+                    
+                    if (response.ok) {
+                        updateStatus('success', `请求成功 (${response.status})`);
+                        responseTime.textContent = `${duration}ms`;
+                        responseOutput.textContent = formatJSON(responseData);
+                    } else {
+                        throw new Error(`HTTP错误: ${response.status} - ${responseData.error || '未知错误'}`);
+                    }
+                    
+                } catch (error) {
+                    const endTime = Date.now();
+                    const duration = endTime - startTime;
+                    responseTime.textContent = `${duration}ms`;
+                    
+                    updateStatus('error', '请求失败: ' + error.message);
+                    responseOutput.textContent = `错误详情: ${error.message}\n\n时间: ${new Date().toLocaleString()}\n耗时: ${duration}ms\n\n请检查:\n1. Netlify环境变量配置\n2. API端点路径是否正确\n3. 网络连接状态`;
+                } finally {
+                    setLoading(false);
                 }
             });
             
-            // 按Enter键也可以触发验证
-            usernameInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    verifyBtn.click();
+            // 更新状态指示器
+            function updateStatus(type, message) {
+                statusIndicator.className = 'status-indicator';
+                statusIndicator.classList.add(`status-${type}`);
+                statusIndicator.querySelector('span:first-child').textContent = message;
+            }
+            
+            // 设置加载状态
+            function setLoading(loading) {
+                sendBtn.disabled = loading;
+                if (loading) {
+                    sendBtn.classList.add('btn-loading');
+                    btnText.textContent = '请求中...';
+                } else {
+                    sendBtn.classList.remove('btn-loading');
+                    btnText.textContent = '发送请求到代理API';
                 }
+            }
+            
+            // 格式化JSON显示
+            function formatJSON(obj) {
+                return JSON.stringify(obj, null, 2);
+            }
+            
+            // 自动调整文本框高度
+            requestBody.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
             });
         });
     </script>
