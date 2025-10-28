@@ -26,10 +26,17 @@ exports.handler = async (event, context) => {
     };
   }
 
-  // 构建请求到 Gemini API 的 URL
-  const path = event.path.replace('/.netlify/functions/gemini-proxy', '');
+  // 使用新的 API 基础地址 [3](@ref)
+  const baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+  
+  // 修正路径处理，确保指向正确的 API 版本
+  let apiPath = event.path.replace('/.netlify/functions/gemini-proxy', '');
+  if (!apiPath.startsWith('/v1beta')) {
+    apiPath = '/v1beta' + (apiPath || '/models');
+  }
+  
   const queryString = event.rawQuery ? `?${event.rawQuery}` : '';
-  const url = `https://generativelanguage.googleapis.com${path}${queryString}&key=${GEMINI_API_KEY}`;
+  const url = `${baseUrl}${apiPath}${queryString}&key=${GEMINI_API_KEY}`;
 
   console.log('Proxying request to:', url);
 
