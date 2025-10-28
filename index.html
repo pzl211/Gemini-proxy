@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini API 代理测试界面</title>
+    <title>Gemini 2.5 Flash API 测试界面</title>
     <style>
         * {
             margin: 0;
@@ -26,7 +26,7 @@
             border-radius: 16px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 900px;
+            max-width: 1000px;
             overflow: hidden;
         }
         
@@ -35,7 +35,6 @@
             padding: 30px;
             text-align: center;
             color: white;
-            position: relative;
         }
         
         .header h1 {
@@ -68,28 +67,6 @@
             margin-bottom: 15px;
             padding-bottom: 10px;
             border-bottom: 2px solid #f0f0f0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .section-actions {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .btn-small {
-            padding: 6px 12px;
-            font-size: 12px;
-            border: 1px solid #ddd;
-            background: white;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .btn-small:hover {
-            background: #f5f5f5;
         }
         
         .form-group {
@@ -101,7 +78,6 @@
             margin-bottom: 8px;
             font-weight: 500;
             color: #555;
-            font-size: 14px;
         }
         
         .form-group input, .form-group textarea, .form-group select {
@@ -111,20 +87,40 @@
             border-radius: 8px;
             font-size: 14px;
             transition: all 0.3s;
-            background-color: #f8f9fa;
         }
         
         .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
             border-color: #4285f4;
             box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
             outline: none;
-            background-color: white;
         }
         
         .form-group textarea {
-            height: 120px;
+            height: 200px;
             resize: vertical;
             font-family: 'Courier New', monospace;
+        }
+        
+        .endpoint-presets {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .endpoint-btn {
+            padding: 6px 12px;
+            background: #f1f3f4;
+            border: 1px solid #dadce0;
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .endpoint-btn:hover {
+            background: #e8f0fe;
+            border-color: #4285f4;
         }
         
         .btn {
@@ -139,13 +135,11 @@
             width: 100%;
             transition: all 0.3s;
             margin-top: 10px;
-            position: relative;
-            overflow: hidden;
         }
         
         .btn:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1);
         }
         
         .btn:disabled {
@@ -156,13 +150,10 @@
         
         .btn-loading::after {
             content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            margin-left: -10px;
-            margin-top: -10px;
-            width: 20px;
-            height: 20px;
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            margin-left: 10px;
             border: 2px solid transparent;
             border-top: 2px solid white;
             border-radius: 50%;
@@ -179,13 +170,12 @@
             border: 1px solid #e8eaed;
             border-radius: 8px;
             padding: 15px;
-            height: 300px;
+            height: 400px;
             overflow-y: auto;
             font-family: 'Courier New', monospace;
             font-size: 13px;
             white-space: pre-wrap;
             word-wrap: break-word;
-            line-height: 1.4;
         }
         
         .status-indicator {
@@ -194,9 +184,6 @@
             font-size: 14px;
             font-weight: 600;
             margin-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
         
         .status-ready {
@@ -252,28 +239,6 @@
             border-top: 1px solid #e8eaed;
         }
         
-        .endpoint-presets {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
-        
-        .endpoint-btn {
-            padding: 6px 12px;
-            background: #f1f3f4;
-            border: 1px solid #dadce0;
-            border-radius: 16px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .endpoint-btn:hover {
-            background: #e8f0fe;
-            border-color: #4285f4;
-        }
-        
         @media (max-width: 768px) {
             .content {
                 grid-template-columns: 1fr;
@@ -283,38 +248,28 @@
             .container {
                 margin: 10px;
             }
-            
-            .section-actions {
-                flex-direction: column;
-            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Gemini API 代理测试界面</h1>
-            <p>通过Netlify Function安全访问Gemini API</p>
+            <h1>Gemini 2.5 Flash API 测试界面</h1>
+            <p>通过Netlify Function代理安全访问Gemini 2.5 Flash模型</p>
         </div>
         
         <div class="content">
             <div class="input-section">
-                <div class="section-title">
-                    <span>请求配置</span>
-                    <div class="section-actions">
-                        <button class="btn-small" id="clearAll">清空</button>
-                        <button class="btn-small" id="loadExample">加载示例</button>
-                    </div>
-                </div>
+                <div class="section-title">请求配置</div>
                 
                 <div class="form-group">
                     <label for="apiEndpoint">API端点</label>
-                    <input type="text" id="apiEndpoint" value="/models/gemini-pro:generateContent" placeholder="例如: /models 或 /models/gemini-pro:generateContent">
+                    <input type="text" id="apiEndpoint" value="/models/gemini-2.5-flash-latest:generateContent" placeholder="例如: /models 或 /models/gemini-2.5-flash-latest:generateContent">
                     <div class="endpoint-presets">
-                        <div class="endpoint-btn" data-endpoint="/models">模型列表</div>
-                        <div class="endpoint-btn" data-endpoint="/models/gemini-pro">Gemini Pro</div>
-                        <div class="endpoint-btn" data-endpoint="/models/gemini-pro:generateContent">生成内容</div>
-                        <div class="endpoint-btn" data-endpoint="/models/gemini-pro-vision:generateContent">视觉模型</div>
+                        <div class="endpoint-btn" data-endpoint="/models">获取模型列表</div>
+                        <div class="endpoint-btn" data-endpoint="/models/gemini-2.5-flash-latest">模型信息</div>
+                        <div class="endpoint-btn" data-endpoint="/models/gemini-2.5-flash-latest:generateContent">生成内容</div>
+                        <div class="endpoint-btn" data-endpoint="/models/gemini-2.5-flash-latest:streamGenerateContent">流式生成</div>
                     </div>
                 </div>
                 
@@ -323,13 +278,21 @@
                     <textarea id="requestBody" placeholder='{"contents": [{"parts": [{"text": "你好"}]}]}'>{
   "contents": [{
     "parts": [{
-      "text": "请用中文简单介绍一下Google Gemini AI，包括它的主要特点和能力。"
+      "text": "请用中文介绍一下Google Gemini 2.5 Flash模型的主要特点和优势。"
     }]
   }],
   "generationConfig": {
     "temperature": 0.7,
-    "maxOutputTokens": 500
-  }
+    "maxOutputTokens": 1000,
+    "topP": 0.8,
+    "topK": 40
+  },
+  "safetySettings": [
+    {
+      "category": "HARM_CATEGORY_HARASSMENT",
+      "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+    }
+  ]
 }</textarea>
                 </div>
                 
@@ -342,22 +305,15 @@
                 </div>
                 
                 <button class="btn" id="sendRequest">
-                    <span class="btn-text">发送请求到代理API</span>
+                    <span class="btn-text">发送请求到Gemini 2.5 Flash</span>
                 </button>
             </div>
             
             <div class="output-section">
-                <div class="section-title">
-                    <span>响应结果</span>
-                    <div class="section-actions">
-                        <button class="btn-small" id="copyResponse">复制</button>
-                        <button class="btn-small" id="clearResponse">清空</button>
-                    </div>
-                </div>
+                <div class="section-title">响应结果</div>
                 
                 <div class="status-indicator status-ready" id="statusIndicator">
                     <span>就绪: 等待请求...</span>
-                    <span id="responseTime"></span>
                 </div>
                 
                 <div class="request-info" id="requestInfo" style="display: none;">
@@ -371,18 +327,23 @@
                     </div>
                     <div class="request-info-item">
                         <span class="request-info-label">响应时间:</span>
-                        <span id="responseTimeDetail">-</span>
+                        <span id="responseTime">-</span>
+                    </div>
+                    <div class="request-info-item">
+                        <span class="request-info-label">使用模型:</span>
+                        <span id="modelUsed">-</span>
                     </div>
                 </div>
                 
                 <div class="response-container" id="responseOutput">
 // 响应将显示在这里
+// 成功调用Gemini 2.5 Flash后，AI生成的响应内容将在此处展示
                 </div>
             </div>
         </div>
         
         <div class="footer">
-            <p>© 2025 Gemini API 代理服务 | 基于Netlify Functions构建 | 安全代理访问</p>
+            <p>© 2025 Gemini 2.5 Flash 代理测试界面 | 基于Netlify Functions构建</p>
         </div>
     </div>
 
@@ -395,74 +356,40 @@
             const apiEndpoint = document.getElementById('apiEndpoint');
             const requestBody = document.getElementById('requestBody');
             const httpMethod = document.getElementById('httpMethod');
-            const responseTime = document.getElementById('responseTime');
             const requestInfo = document.getElementById('requestInfo');
             const requestId = document.getElementById('requestId');
             const statusCode = document.getElementById('statusCode');
-            const responseTimeDetail = document.getElementById('responseTimeDetail');
+            const responseTime = document.getElementById('responseTime');
+            const modelUsed = document.getElementById('modelUsed');
 
-            // 端点预设
+            // 端点预设按钮
             document.querySelectorAll('.endpoint-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     apiEndpoint.value = this.getAttribute('data-endpoint');
                 });
             });
 
-            // 清空所有
-            document.getElementById('clearAll').addEventListener('click', function() {
-                apiEndpoint.value = '';
-                requestBody.value = '';
-                responseOutput.textContent = '// 响应将显示在这里';
-                updateStatus('ready', '就绪: 等待请求...');
-                requestInfo.style.display = 'none';
-            });
-
-            // 加载示例
-            document.getElementById('loadExample').addEventListener('click', function() {
-                apiEndpoint.value = '/models/gemini-pro:generateContent';
-                requestBody.value = `{
-  "contents": [{
-    "parts": [{
-      "text": "请用中文简单介绍一下Google Gemini AI，包括它的主要特点和能力。"
-    }]
-  }],
-  "generationConfig": {
-    "temperature": 0.7,
-    "maxOutputTokens": 500
-  }
-}`;
-            });
-
-            // 复制响应
-            document.getElementById('copyResponse').addEventListener('click', function() {
-                navigator.clipboard.writeText(responseOutput.textContent).then(() => {
-                    const originalText = this.textContent;
-                    this.textContent = '已复制!';
-                    setTimeout(() => {
-                        this.textContent = originalText;
-                    }, 2000);
-                });
-            });
-
-            // 清空响应
-            document.getElementById('clearResponse').addEventListener('click', function() {
-                responseOutput.textContent = '// 响应将显示在这里';
-                requestInfo.style.display = 'none';
-            });
-
             // 发送请求到代理函数
             sendBtn.addEventListener('click', async function() {
                 const endpoint = apiEndpoint.value.trim() || '/models';
                 const method = httpMethod.value;
+                
+                // 验证端点格式
+                if (!endpoint.startsWith('/')) {
+                    updateStatus('error', '错误: API端点必须以斜杠(/)开头');
+                    return;
+                }
+                
                 let bodyContent = null;
                 
-                try {
-                    if (method !== 'GET' && requestBody.value.trim()) {
+                // 验证JSON格式
+                if (method !== 'GET' && requestBody.value.trim()) {
+                    try {
                         bodyContent = JSON.parse(requestBody.value.trim());
+                    } catch (e) {
+                        updateStatus('error', 'JSON格式错误: ' + e.message);
+                        return;
                     }
-                } catch (e) {
-                    updateStatus('error', 'JSON格式错误: ' + e.message);
-                    return;
                 }
                 
                 // 更新状态
@@ -475,7 +402,8 @@
                     const requestOptions = {
                         method: method,
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'X-Client': 'Gemini-2.5-Flash-Tester'
                         }
                     };
                     
@@ -483,6 +411,7 @@
                         requestOptions.body = JSON.stringify(bodyContent);
                     }
                     
+                    // 发送请求到Netlify代理函数
                     const response = await fetch(`/.netlify/functions/gemini-proxy${endpoint}`, requestOptions);
                     const endTime = Date.now();
                     const duration = endTime - startTime;
@@ -491,14 +420,21 @@
                     
                     // 显示请求信息
                     requestInfo.style.display = 'block';
-                    requestId.textContent = response.headers.get('X-Request-ID') || '-';
+                    requestId.textContent = response.headers.get('X-Request-ID') || '未知';
                     statusCode.textContent = response.status;
-                    responseTimeDetail.textContent = `${duration}ms`;
+                    responseTime.textContent = `${duration}ms`;
+                    modelUsed.textContent = response.headers.get('X-Model-Used') || 'gemini-2.5-flash-latest';
                     
                     if (response.ok) {
-                        updateStatus('success', `请求成功 (${response.status})`);
-                        responseTime.textContent = `${duration}ms`;
-                        responseOutput.textContent = formatJSON(responseData);
+                        updateStatus('success', `请求成功 (${response.status}) - ${duration}ms`);
+                        
+                        // 格式化并显示响应
+                        if (responseData.candidates && responseData.candidates[0]) {
+                            const textContent = responseData.candidates[0].content.parts[0].text;
+                            responseOutput.textContent = textContent;
+                        } else {
+                            responseOutput.textContent = JSON.stringify(responseData, null, 2);
+                        }
                     } else {
                         throw new Error(`HTTP错误: ${response.status} - ${responseData.error || '未知错误'}`);
                     }
@@ -506,10 +442,14 @@
                 } catch (error) {
                     const endTime = Date.now();
                     const duration = endTime - startTime;
-                    responseTime.textContent = `${duration}ms`;
                     
                     updateStatus('error', '请求失败: ' + error.message);
-                    responseOutput.textContent = `错误详情: ${error.message}\n\n时间: ${new Date().toLocaleString()}\n耗时: ${duration}ms\n\n请检查:\n1. Netlify环境变量配置\n2. API端点路径是否正确\n3. 网络连接状态`;
+                    responseOutput.textContent = `错误详情: ${error.message}\n\n时间: ${new Date().toLocaleString()}\n耗时: ${duration}ms\n\n建议排查步骤:\n1. 检查Netlify环境变量GEMINI_API_KEY是否设置\n2. 确认API端点路径是否正确\n3. 验证网络连接状态`;
+                    
+                    // 显示错误信息
+                    requestInfo.style.display = 'block';
+                    statusCode.textContent = '错误';
+                    responseTime.textContent = `${duration}ms`;
                 } finally {
                     setLoading(false);
                 }
@@ -519,7 +459,7 @@
             function updateStatus(type, message) {
                 statusIndicator.className = 'status-indicator';
                 statusIndicator.classList.add(`status-${type}`);
-                statusIndicator.querySelector('span:first-child').textContent = message;
+                statusIndicator.querySelector('span').textContent = message;
             }
             
             // 设置加载状态
@@ -530,19 +470,31 @@
                     btnText.textContent = '请求中...';
                 } else {
                     sendBtn.classList.remove('btn-loading');
-                    btnText.textContent = '发送请求到代理API';
+                    btnText.textContent = '发送请求到Gemini 2.5 Flash';
                 }
             }
             
-            // 格式化JSON显示
-            function formatJSON(obj) {
-                return JSON.stringify(obj, null, 2);
-            }
-            
-            // 自动调整文本框高度
-            requestBody.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = (this.scrollHeight) + 'px';
+            // 示例请求体
+            document.getElementById('loadExample').addEventListener('click', function() {
+                requestBody.value = `{
+  "contents": [{
+    "parts": [{
+      "text": "请用中文详细介绍Gemini 2.5 Flash模型的技术架构、性能特点和实际应用场景。"
+    }]
+  }],
+  "generationConfig": {
+    "temperature": 0.7,
+    "maxOutputTokens": 1500,
+    "topP": 0.8,
+    "topK": 40
+  },
+  "safetySettings": [
+    {
+      "category": "HARM_CATEGORY_HARASSMENT",
+      "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+    }
+  ]
+}`;
             });
         });
     </script>
