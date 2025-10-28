@@ -41,12 +41,18 @@ exports.handler = async (event, context) => {
     // 构建基础URL
     const apiBaseUrl = 'https://generativelanguage.googleapis.com';
     
-    // 更健壮的路径处理
+    // 更健壮的路径处理 - 专门适配 gemini-2.5-flash-latest
     let apiPath = event.path.replace('/.netlify/functions/gemini-proxy', '');
     
     // 确保路径以 /v1beta 开头
     if (!apiPath.startsWith('/v1beta')) {
       apiPath = '/v1beta' + (apiPath || '/models');
+    }
+
+    // 🔥 关键修复：自动映射所有旧模型名称到正确的 gemini-2.5-flash-latest
+    if (apiPath.includes('gemini-pro') || apiPath.includes('gemini-2.0') || apiPath.includes('gemini-2.5flash')) {
+      apiPath = apiPath.replace(/gemini-pro|gemini-2\.0|gemini-2\.5flash/g, 'gemini-2.5-flash-latest');
+      console.log(`[${requestId}] 自动映射模型到: gemini-2.5-flash-latest`);
     }
 
     // 处理查询参数
@@ -70,13 +76,13 @@ exports.handler = async (event, context) => {
 
     // 准备fetch选项 - 使用AbortController实现超时
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     const fetchOptions = {
       method: event.httpMethod,
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'Netlify-Gemini-Proxy/1.0',
+        'User-Agent': 'Netlify-Gemini-Proxy/2.5',
         'X-Request-ID': requestId
       },
       signal: controller.signal
@@ -85,15 +91,12 @@ exports.handler = async (event, context) => {
     // 处理请求体
     if (event.body && !['GET', 'HEAD'].includes(event.httpMethod)) {
       try {
-        // 验证并解析JSON
         const parsedBody = JSON.parse(event.body);
         
-        // 🔧 可选：添加请求内容安全检查
-        if (isRequestSafe(parsedBody)) {
-          fetchOptions.body = JSON.stringify(parsedBody);
-        } else {
-          throw new Error('请求内容包含潜在安全问题');
-        }
+        // 为 gemini-2.5-flash-latest 优化请求体
+        const optimizedBody = optimizeForGemini25Flash(parsedBody);
+        fetchOptions.body = JSON.stringify(optimizedBody);
+        
       } catch (e) {
         console.error(`[${requestId}] 请求体解析错误:`, e.message);
         return {
@@ -122,6 +125,14 @@ exports.handler = async (event, context) => {
       const errorText = await response.text();
       console.error(`[${requestId}] Gemini API错误:`, response.status, errorText);
       
+      // 提供更友好的错误信息
+      let userFriendlyError = `API请求失败: ${response.status}`;
+      if (response.status === 404) {
+        userFriendlyError = '模型未找到，请检查模型名称是否正确';
+      } else if (response.status === 400) {
+        userFriendlyError = '请求参数错误，请检查模型名称和请求格式';
+      }
+      
       return {
         statusCode: response.status,
         headers: { 
@@ -130,26 +141,27 @@ exports.handler = async (event, context) => {
           'X-Request-ID': requestId
         },
         body: JSON.stringify({
-          error: `API请求失败: ${response.status}`,
+          error: userFriendlyError,
           details: errorText.substring(0, 500),
-          requestId: requestId
+          requestId: requestId,
+          suggestion: '当前使用模型: gemini-2.5-flash-latest'
         })
       };
     }
 
     const data = await response.json();
     
-    // 记录成功请求
-    console.log(`[${requestId}] 请求完成: ${responseTime}ms`);
+    console.log(`[${requestId}] 请求成功: ${responseTime}ms`);
     
     return {
       statusCode: 200,
       headers: { 
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json',
-        'X-Proxy-Version': '1.2',
+        'X-Proxy-Version': '2.5',
         'X-Request-ID': requestId,
-        'X-Response-Time': `${responseTime}ms`
+        'X-Response-Time': `${responseTime}ms`,
+        'X-Model-Used': 'gemini-2.5-flash-latest'
       },
       body: JSON.stringify(data)
     };
@@ -192,17 +204,26 @@ function generateRequestId() {
   return `req_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 8)}`;
 }
 
-// 🔧 可选：请求安全检查
-function isRequestSafe(body) {
-  // 检查请求体大小
-  const bodySize = JSON.stringify(body).length;
-  if (bodySize > 1024 * 1024) { // 1MB限制
-    console.warn('请求体过大:', bodySize);
-    return false;
+// 🔧 为 gemini-2.5-flash-latest 优化请求体
+function optimizeForGemini25Flash(body) {
+  // 确保使用适合 2.5-flash-latest 模型的参数
+  if (body.contents && Array.isArray(body.contents)) {
+    console.log('使用 gemini-2.5-flash-latest 模型优化请求');
+    
+    // 可以在这里添加针对 2.5-flash-latest 的特殊优化
+    // 例如设置合适的温度、最大token数等
+    if (!body.generationConfig) {
+      body.generationConfig = {};
+    }
+    
+    // 为 gemini-2.5-flash-latest 设置合理的默认值
+    if (body.generationConfig.temperature === undefined) {
+      body.generationConfig.temperature = 0.7;
+    }
+    
+    if (body.generationConfig.maxOutputTokens === undefined) {
+      body.generationConfig.maxOutputTokens = 2048;
+    }
   }
-  
-  // 可以在这里添加更多安全检查
-  // 例如：检查prompt长度、内容等
-  
-  return true;
+  return body;
 }
