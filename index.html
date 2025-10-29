@@ -254,8 +254,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Gemini 2.5 Flash API 测试界面</h1>
-            <p>通过Netlify Function代理安全访问Gemini 2.5 Flash模型</p>
+            <h1>gemini-2.5-flash API 测试界面</h1>
+            <p>通过Netlify Function代理安全访问gemini-2.5-flash模型</p>
         </div>
         
         <div class="content">
@@ -264,12 +264,12 @@
                 
                 <div class="form-group">
                     <label for="apiEndpoint">API端点</label>
-                    <input type="text" id="apiEndpoint" value="/models/gemini-2.5-flash-latest:generateContent" placeholder="例如: /models 或 /models/gemini-2.5-flash-latest:generateContent">
+                    <input type="text" id="apiEndpoint" value="/models/gemini-2.5-flash:generateContent" placeholder="例如: /models 或 /models/gemini-2.5-flash:generateContent">
                     <div class="endpoint-presets">
                         <div class="endpoint-btn" data-endpoint="/models">获取模型列表</div>
-                        <div class="endpoint-btn" data-endpoint="/models/gemini-2.5-flash-latest">模型信息</div>
-                        <div class="endpoint-btn" data-endpoint="/models/gemini-2.5-flash-latest:generateContent">生成内容</div>
-                        <div class="endpoint-btn" data-endpoint="/models/gemini-2.5-flash-latest:streamGenerateContent">流式生成</div>
+                        <div class="endpoint-btn" data-endpoint="/models/gemini-2.5-flash">模型信息</div>
+                        <div class="endpoint-btn" data-endpoint="/models/gemini-2.5-flash:generateContent">生成内容</div>
+                        <div class="endpoint-btn" data-endpoint="/models/gemini-2.5-flash:streamGenerateContent">流式生成</div>
                     </div>
                 </div>
                 
@@ -278,7 +278,7 @@
                     <textarea id="requestBody" placeholder='{"contents": [{"parts": [{"text": "你好"}]}]}'>{
   "contents": [{
     "parts": [{
-      "text": "请用中文介绍一下Google Gemini 2.5 Flash模型的主要特点和优势。"
+      "text": "请用中文介绍一下Google gemini-2.5-flash模型的主要特点和优势。"
     }]
   }],
   "generationConfig": {
@@ -305,7 +305,7 @@
                 </div>
                 
                 <button class="btn" id="sendRequest">
-                    <span class="btn-text">发送请求到Gemini 2.5 Flash</span>
+                    <span class="btn-text">发送请求到gemini-2.5-flash</span>
                 </button>
             </div>
             
@@ -337,13 +337,13 @@
                 
                 <div class="response-container" id="responseOutput">
 // 响应将显示在这里
-// 成功调用Gemini 2.5 Flash后，AI生成的响应内容将在此处展示
+// 成功调用gemini-2.5-flash后，AI生成的响应内容将在此处展示
                 </div>
             </div>
         </div>
         
         <div class="footer">
-            <p>© 2025 Gemini 2.5 Flash 代理测试界面 | 基于Netlify Functions构建</p>
+            <p>© 2025 gemini-2.5-flash 代理测试界面 | 基于Netlify Functions构建</p>
         </div>
     </div>
 
@@ -403,7 +403,7 @@
                         method: method,
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-Client': 'Gemini-2.5-Flash-Tester'
+                            'X-Client': 'gemini-2.5-flash-tester'
                         }
                     };
                     
@@ -423,7 +423,7 @@
                     requestId.textContent = response.headers.get('X-Request-ID') || '未知';
                     statusCode.textContent = response.status;
                     responseTime.textContent = `${duration}ms`;
-                    modelUsed.textContent = response.headers.get('X-Model-Used') || 'gemini-2.5-flash-latest';
+                    modelUsed.textContent = response.headers.get('X-Model-Used') || 'gemini-2.5-flash';
                     
                     if (response.ok) {
                         updateStatus('success', `请求成功 (${response.status}) - ${duration}ms`);
@@ -470,7 +470,7 @@
                     btnText.textContent = '请求中...';
                 } else {
                     sendBtn.classList.remove('btn-loading');
-                    btnText.textContent = '发送请求到Gemini 2.5 Flash';
+                    btnText.textContent = '发送请求到gemini-2.5-flash';
                 }
             }
             
@@ -479,7 +479,7 @@
                 requestBody.value = `{
   "contents": [{
     "parts": [{
-      "text": "请用中文详细介绍Gemini 2.5 Flash模型的技术架构、性能特点和实际应用场景。"
+      "text": "请用中文详细介绍gemini-2.5-flash模型的技术架构、性能特点和实际应用场景。"
     }]
   }],
   "generationConfig": {
