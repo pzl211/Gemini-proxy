@@ -49,7 +49,7 @@ exports.handler = async (event, context) => {
       apiPath = '/v1beta' + (apiPath || '/models');
     }
 
-    // 🔥 关键修复：使用正确的模型名称 gemini-2.5-flash
+    // 自动映射模型名称
     if (apiPath.includes('gemini-pro') || apiPath.includes('gemini-2.0') || apiPath.includes('gemini-2.5flash')) {
       apiPath = apiPath.replace(/gemini-pro|gemini-2\.0|gemini-2\.5flash|gemini-2\.5-flash-latest/g, 'gemini-2.5-flash');
       console.log(`[${requestId}] 自动映射模型到: gemini-2.5-flash`);
@@ -138,7 +138,7 @@ exports.handler = async (event, context) => {
 
     const data = await response.json();
     
-    // 🔥 关键修复：安全地处理响应数据，避免 Cannot read properties of undefined
+    // 🔥 关键修复：正确处理 Gemini API 响应格式
     console.log(`[${requestId}] 原始响应数据:`, JSON.stringify(data, null, 2));
     
     let resultData = data;
@@ -148,145 +148,4 @@ exports.handler = async (event, context) => {
       resultData = safeExtractContent(data, requestId);
     }
     
-    console.log(`[${requestId}] 请求成功: ${responseTime}ms`);
-    
-    return {
-      statusCode: 200,
-      headers: { 
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json',
-        'X-Proxy-Version': '2.5',
-        'X-Request-ID': requestId,
-        'X-Response-Time': `${responseTime}ms`,
-        'X-Model-Used': 'gemini-2.5-flash'
-      },
-      body: JSON.stringify(resultData)
-    };
-    
-  } catch (error) {
-    const responseTime = Date.now() - startTime;
-    console.error(`[${requestId}] 代理函数错误:`, error.message);
-    
-    let statusCode = 500;
-    let errorMessage = '代理服务器内部错误';
-    
-    if (error.name === 'AbortError') {
-      statusCode = 504;
-      errorMessage = '请求超时';
-    } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      statusCode = 502;
-      errorMessage = '网络连接错误';
-    }
-    
-    return {
-      statusCode: statusCode,
-      headers: { 
-        'Access-Control-Allow-Origin': '*', 
-        'Content-Type': 'application/json',
-        'X-Request-ID': requestId
-      },
-      body: JSON.stringify({ 
-        error: errorMessage,
-        details: error.message,
-        requestId: requestId,
-        timestamp: new Date().toISOString(),
-        responseTime: `${responseTime}ms`
-      })
-    };
-  }
-};
-
-// 生成请求ID
-function generateRequestId() {
-  return `req_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 8)}`;
-}
-
-// 🔥 关键修复：安全地提取内容，避免 Cannot read properties of undefined (reading '0') 错误
-function safeExtractContent(data, requestId) {
-  try {
-    console.log(`[${requestId}] 开始安全提取内容`);
-    
-    // 检查数据结构是否存在
-    if (!data) {
-      console.warn(`[${requestId}] 响应数据为空`);
-      return {
-        success: false,
-        error: 'API返回空响应',
-        rawData: data
-      };
-    }
-    
-    // 检查是否有错误信息
-    if (data.error) {
-      console.warn(`[${requestId}] API返回错误:`, data.error);
-      return {
-        success: false,
-        error: data.error.message || 'API返回错误',
-        rawData: data
-      };
-    }
-    
-    // 安全地检查 candidates 数组 - 这是导致错误的根源！
-    if (!data.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) {
-      console.warn(`[${requestId}] 无有效candidates数据`);
-      return {
-        success: false,
-        error: 'API响应格式异常：无candidates数据',
-        rawData: data
-      };
-    }
-    
-    const candidate = data.candidates[0];
-    
-    // 安全地检查 content
-    if (!candidate || !candidate.content) {
-      console.warn(`[${requestId}] candidate或content为空`);
-      return {
-        success: false,
-        error: 'API响应格式异常：candidate内容为空',
-        rawData: data
-      };
-    }
-    
-    // 安全地检查 parts
-    if (!candidate.content.parts || !Array.isArray(candidate.content.parts) || candidate.content.parts.length === 0) {
-      console.warn(`[${requestId}] parts数据异常`);
-      return {
-        success: false,
-        error: 'API响应格式异常：无parts数据',
-        rawData: data
-      };
-    }
-    
-    const part = candidate.content.parts[0];
-    
-    // 安全地检查 text
-    if (!part || part.text === undefined || part.text === null) {
-      console.warn(`[${requestId}] text内容为空`);
-      return {
-        success: false,
-        error: 'API响应格式异常：无text内容',
-        rawData: data
-      };
-    }
-    
-    // 成功提取内容
-    console.log(`[${requestId}] 成功提取文本内容，长度: ${part.text.length}`);
-    
-    return {
-      success: true,
-      text: part.text,
-      fullResponse: data,
-      usageMetadata: data.usageMetadata || null
-    };
-    
-  } catch (error) {
-    console.error(`[${requestId}] 内容提取错误:`, error.message);
-    return {
-      success: false,
-      error: `内容提取失败: ${error.message}`,
-      rawData: data,
-      stack: error.stack
-    };
-  }
-}
+    console.log(`[${requestId}] 请求成功: ${resp
