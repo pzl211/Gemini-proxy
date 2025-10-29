@@ -39,7 +39,7 @@ exports.handler = async (event, context) => {
 
   try {
     // 构建基础URL
-    const apiBaseUrl = 'https://generativelanguage.googleapis.com';
+    const apiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta';
     
     // 更健壮的路径处理
     let apiPath = event.path.replace('/.netlify/functions/gemini-proxy', '');
