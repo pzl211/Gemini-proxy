@@ -1,20 +1,16 @@
 [build]
-  # 明确告诉Netlify没有构建步骤
-  command = "echo 'No build step for API proxy'"
-  # 关键！ 发布目录设置为一个不存在的目录或根目录，因为我们没有静态文件
-  publish = "."
+  publish = "public"
+  command = "echo 'No build required'"
 
-# 关键！ 明确指定我们的函数目录位置
 [functions]
   directory = "netlify/functions"
 
-# 指定 Node.js 版本为 20
-[build.environment]
-  NODE_VERSION = "20"
+[[redirects]]
+  from = "/models/*"
+  to = "/.netlify/functions/gemini-proxy/:splat"
+  status = 200
 
-# 设置重定向，防止SPA路由404（可选，但建议加上）
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-  conditions = {Language = [], Country = [], Role = []}
