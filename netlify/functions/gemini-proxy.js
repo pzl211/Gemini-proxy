@@ -1,28 +1,72 @@
-// netlify/functions/gemini-proxy.js
-exports.handler = async (event, context) => {
+async function handleGeminiRequest(requestBody, apiPath, timeout = 10000) {
   const requestId = generateRequestId();
   const startTime = Date.now();
   
-  console.log(`[${requestId}] 收到请求: ${event.httpMethod} ${event.path}`);
-  
-  // CORS处理
-  if (event.httpMethod === 'OPTIONS') {
+  try {
+    // 创建AbortController用于超时控制
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    // 发送API请求
+    const response = await fetch(apiPath, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Request-ID': requestId
+      },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    // 检查响应状态
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    // 解析响应数据
+    const data = await response.json();
+    const responseTime = Date.now() - startTime;
+    
+    // 处理不同类型的API响应
+    let resultData = data;
+    if (apiPath.includes('generateContent')) {
+      resultData = safeExtractContent(data, requestId);
+    }
+    
+    console.log(`[${requestId}] 请求成功: ${responseTime}ms`);
+    
     return {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Request-ID',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Max-Age': '86400'
+      headers: { 
+        'Access-Control-Allow-Origin': '*', 
+        'Content-Type': 'application/json',
+        'X-Request-ID': requestId
       },
-      body: ''
+      body: JSON.stringify(resultData)
     };
-  }
-
-  // 从环境变量获取API密钥
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-  if (!GEMINI_API_KEY) {
-    console.error(`[${requestId}] GEMINI_API_KEY 未设置`);
+    
+  } catch (error) {
+    const responseTime = Date.now() - startTime;
+    console.error(`[${requestId}] 请求异常:`, error.message);
+    
+    // 处理不同类型的错误
+    if (error.name === 'AbortError') {
+      return {
+        statusCode: 504,
+        headers: { 
+          'Access-Control-Allow-Origin': '*', 
+          'Content-Type': 'application/json',
+          'X-Request-ID': requestId
+        },
+        body: JSON.stringify({ 
+          error: '请求超时',
+          requestId: requestId
+        })
+      };
+    }
+    
     return {
       statusCode: 500,
       headers: { 
@@ -31,121 +75,32 @@ exports.handler = async (event, context) => {
         'X-Request-ID': requestId
       },
       body: JSON.stringify({ 
-        error: '服务器配置错误',
+        error: '服务器内部错误',
+        details: error.message,
         requestId: requestId
       })
     };
   }
+}
 
+// 辅助函数：生成唯一请求ID
+function generateRequestId() {
+  return Math.random().toString(36).substring(2, 15) + 
+         Math.random().toString(36).substring(2, 15);
+}
+
+// 辅助函数：安全提取API响应内容
+function safeExtractContent(data, requestId) {
   try {
-    // 构建基础URL
-    const apiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta';
-    
-    // 更健壮的路径处理
-    let apiPath = event.path.replace('/.netlify/functions/gemini-proxy', '');
-    
-    // 确保路径以 /v1beta 开头
-    if (!apiPath.startsWith('/v1beta')) {
-      apiPath = '/v1beta' + (apiPath || '/models');
-    }
-
-    // 自动映射模型名称
-    if (apiPath.includes('gemini-pro') || apiPath.includes('gemini-2.0') || apiPath.includes('gemini-2.5flash')) {
-      apiPath = apiPath.replace(/gemini-pro|gemini-2\.0|gemini-2\.5flash|gemini-2\.5-flash-latest/g, 'gemini-2.5-flash');
-      console.log(`[${requestId}] 自动映射模型到: gemini-2.5-flash`);
-    }
-
-    // 处理查询参数
-    const queryParams = new URLSearchParams();
-    queryParams.append('key', GEMINI_API_KEY);
-    
-    // 保留原始查询参数（除了key）
-    if (event.rawQuery) {
-      const originalParams = new URLSearchParams(event.rawQuery);
-      for (const [key, value] of originalParams) {
-        if (key !== 'key') {
-          queryParams.append(key, value);
-        }
-      }
-    }
-
-    const queryString = queryParams.toString();
-    const url = `${apiBaseUrl}${apiPath}${queryString ? `?${queryString}` : ''}`;
-
-    console.log(`[${requestId}] 请求URL: ${url.replace(GEMINI_API_KEY, '***')}`);
-
-    // 准备fetch选项
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    const fetchOptions = {
-      method: event.httpMethod,
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Netlify-Gemini-Proxy/2.5',
-        'X-Request-ID': requestId
-      },
-      signal: controller.signal
-    };
-
-    // 处理请求体
-    if (event.body && !['GET', 'HEAD'].includes(event.httpMethod)) {
-      try {
-        const parsedBody = JSON.parse(event.body);
-        fetchOptions.body = JSON.stringify(parsedBody);
-      } catch (e) {
-        console.error(`[${requestId}] 请求体解析错误:`, e.message);
-        return {
-          statusCode: 400,
-          headers: { 
-            'Access-Control-Allow-Origin': '*', 
-            'Content-Type': 'application/json',
-            'X-Request-ID': requestId
-          },
-          body: JSON.stringify({ 
-            error: '无效的请求格式',
-            details: e.message,
-            requestId: requestId
-          })
-        };
-      }
-    }
-
-    const response = await fetch(url, fetchOptions);
-    clearTimeout(timeoutId);
-    
-    const responseTime = Date.now() - startTime;
-    console.log(`[${requestId}] Gemini API响应: ${response.status} (${responseTime}ms)`);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[${requestId}] Gemini API错误:`, response.status, errorText);
-      
+    if (data.candidates && data.candidates.length > 0) {
       return {
-        statusCode: response.status,
-        headers: { 
-          'Access-Control-Allow-Origin': '*', 
-          'Content-Type': 'application/json',
-          'X-Request-ID': requestId
-        },
-        body: JSON.stringify({
-          error: `API请求失败: ${response.status}`,
-          details: errorText.substring(0, 500),
-          requestId: requestId
-        })
+        ...data,
+        extractedContent: data.candidates[0].content
       };
     }
-
-    const data = await response.json();
-    
-    // 正确处理 Gemini API 响应格式
-    console.log(`[${requestId}] 原始响应数据:`, JSON.stringify(data, null, 2));
-    
-    let resultData = data;
-    
-    // 如果是生成内容的响应，安全提取文本
-    if (apiPath.includes('generateContent')) {
-      resultData = safeExtractContent(data, requestId);
-    }
-    
-    console.log(`[${requestId}] 请求成功: ${responseTime
+    return data;
+  } catch (error) {
+    console.error(`[${requestId}] 内容提取错误:`, error.message);
+    return data;
+  }
+}
