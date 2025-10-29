@@ -41,7 +41,7 @@ exports.handler = async (event, context) => {
     // 构建基础URL
     const apiBaseUrl = 'https://generativelanguage.googleapis.com';
     
-    // 更健壮的路径处理 - 专门适配 gemini-2.5-flash-latest
+    // 更健壮的路径处理
     let apiPath = event.path.replace('/.netlify/functions/gemini-proxy', '');
     
     // 确保路径以 /v1beta 开头
@@ -49,10 +49,10 @@ exports.handler = async (event, context) => {
       apiPath = '/v1beta' + (apiPath || '/models');
     }
 
-    // 🔥 关键修复：自动映射所有旧模型名称到正确的 gemini-2.5-flash-latest
+    // 🔥 关键修复：使用正确的模型名称 gemini-2.5-flash
     if (apiPath.includes('gemini-pro') || apiPath.includes('gemini-2.0') || apiPath.includes('gemini-2.5flash')) {
-      apiPath = apiPath.replace(/gemini-pro|gemini-2\.0|gemini-2\.5flash/g, 'gemini-2.5-flash-latest');
-      console.log(`[${requestId}] 自动映射模型到: gemini-2.5-flash-latest`);
+      apiPath = apiPath.replace(/gemini-pro|gemini-2\.0|gemini-2\.5flash|gemini-2\.5-flash-latest/g, 'gemini-2.5-flash');
+      console.log(`[${requestId}] 自动映射模型到: gemini-2.5-flash`);
     }
 
     // 处理查询参数
@@ -74,7 +74,7 @@ exports.handler = async (event, context) => {
 
     console.log(`[${requestId}] 请求URL: ${url.replace(GEMINI_API_KEY, '***')}`);
 
-    // 准备fetch选项 - 使用AbortController实现超时
+    // 准备fetch选项
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
@@ -92,11 +92,7 @@ exports.handler = async (event, context) => {
     if (event.body && !['GET', 'HEAD'].includes(event.httpMethod)) {
       try {
         const parsedBody = JSON.parse(event.body);
-        
-        // 为 gemini-2.5-flash-latest 优化请求体
-        const optimizedBody = optimizeForGemini25Flash(parsedBody);
-        fetchOptions.body = JSON.stringify(optimizedBody);
-        
+        fetchOptions.body = JSON.stringify(parsedBody);
       } catch (e) {
         console.error(`[${requestId}] 请求体解析错误:`, e.message);
         return {
@@ -125,14 +121,6 @@ exports.handler = async (event, context) => {
       const errorText = await response.text();
       console.error(`[${requestId}] Gemini API错误:`, response.status, errorText);
       
-      // 提供更友好的错误信息
-      let userFriendlyError = `API请求失败: ${response.status}`;
-      if (response.status === 404) {
-        userFriendlyError = '模型未找到，请检查模型名称是否正确';
-      } else if (response.status === 400) {
-        userFriendlyError = '请求参数错误，请检查模型名称和请求格式';
-      }
-      
       return {
         statusCode: response.status,
         headers: { 
@@ -141,15 +129,24 @@ exports.handler = async (event, context) => {
           'X-Request-ID': requestId
         },
         body: JSON.stringify({
-          error: userFriendlyError,
+          error: `API请求失败: ${response.status}`,
           details: errorText.substring(0, 500),
-          requestId: requestId,
-          suggestion: '当前使用模型: gemini-2.5-flash-latest'
+          requestId: requestId
         })
       };
     }
 
     const data = await response.json();
+    
+    // 🔥 关键修复：安全地处理响应数据，避免 Cannot read properties of undefined
+    console.log(`[${requestId}] 原始响应数据:`, JSON.stringify(data, null, 2));
+    
+    let resultData = data;
+    
+    // 如果是生成内容的响应，安全提取文本
+    if (apiPath.includes('generateContent')) {
+      resultData = safeExtractContent(data, requestId);
+    }
     
     console.log(`[${requestId}] 请求成功: ${responseTime}ms`);
     
@@ -161,9 +158,9 @@ exports.handler = async (event, context) => {
         'X-Proxy-Version': '2.5',
         'X-Request-ID': requestId,
         'X-Response-Time': `${responseTime}ms`,
-        'X-Model-Used': 'gemini-2.5-flash-latest'
+        'X-Model-Used': 'gemini-2.5-flash'
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify(resultData)
     };
     
   } catch (error) {
@@ -204,26 +201,92 @@ function generateRequestId() {
   return `req_${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 8)}`;
 }
 
-// 🔧 为 gemini-2.5-flash-latest 优化请求体
-function optimizeForGemini25Flash(body) {
-  // 确保使用适合 2.5-flash-latest 模型的参数
-  if (body.contents && Array.isArray(body.contents)) {
-    console.log('使用 gemini-2.5-flash-latest 模型优化请求');
+// 🔥 关键修复：安全地提取内容，避免 Cannot read properties of undefined (reading '0') 错误
+function safeExtractContent(data, requestId) {
+  try {
+    console.log(`[${requestId}] 开始安全提取内容`);
     
-    // 可以在这里添加针对 2.5-flash-latest 的特殊优化
-    // 例如设置合适的温度、最大token数等
-    if (!body.generationConfig) {
-      body.generationConfig = {};
+    // 检查数据结构是否存在
+    if (!data) {
+      console.warn(`[${requestId}] 响应数据为空`);
+      return {
+        success: false,
+        error: 'API返回空响应',
+        rawData: data
+      };
     }
     
-    // 为 gemini-2.5-flash-latest 设置合理的默认值
-    if (body.generationConfig.temperature === undefined) {
-      body.generationConfig.temperature = 0.7;
+    // 检查是否有错误信息
+    if (data.error) {
+      console.warn(`[${requestId}] API返回错误:`, data.error);
+      return {
+        success: false,
+        error: data.error.message || 'API返回错误',
+        rawData: data
+      };
     }
     
-    if (body.generationConfig.maxOutputTokens === undefined) {
-      body.generationConfig.maxOutputTokens = 2048;
+    // 安全地检查 candidates 数组 - 这是导致错误的根源！
+    if (!data.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) {
+      console.warn(`[${requestId}] 无有效candidates数据`);
+      return {
+        success: false,
+        error: 'API响应格式异常：无candidates数据',
+        rawData: data
+      };
     }
+    
+    const candidate = data.candidates[0];
+    
+    // 安全地检查 content
+    if (!candidate || !candidate.content) {
+      console.warn(`[${requestId}] candidate或content为空`);
+      return {
+        success: false,
+        error: 'API响应格式异常：candidate内容为空',
+        rawData: data
+      };
+    }
+    
+    // 安全地检查 parts
+    if (!candidate.content.parts || !Array.isArray(candidate.content.parts) || candidate.content.parts.length === 0) {
+      console.warn(`[${requestId}] parts数据异常`);
+      return {
+        success: false,
+        error: 'API响应格式异常：无parts数据',
+        rawData: data
+      };
+    }
+    
+    const part = candidate.content.parts[0];
+    
+    // 安全地检查 text
+    if (!part || part.text === undefined || part.text === null) {
+      console.warn(`[${requestId}] text内容为空`);
+      return {
+        success: false,
+        error: 'API响应格式异常：无text内容',
+        rawData: data
+      };
+    }
+    
+    // 成功提取内容
+    console.log(`[${requestId}] 成功提取文本内容，长度: ${part.text.length}`);
+    
+    return {
+      success: true,
+      text: part.text,
+      fullResponse: data,
+      usageMetadata: data.usageMetadata || null
+    };
+    
+  } catch (error) {
+    console.error(`[${requestId}] 内容提取错误:`, error.message);
+    return {
+      success: false,
+      error: `内容提取失败: ${error.message}`,
+      rawData: data,
+      stack: error.stack
+    };
   }
-  return body;
 }
