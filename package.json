@@ -7,7 +7,7 @@
     "dev": "netlify dev"
   },
   "dependencies": {
-    "node-fetch": "^2.6.7"
+    "node-fetch": "^3.0.0"
   },
   "engines": {
     "node": ">=14.0.0"
